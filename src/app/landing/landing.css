@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+.brand {
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.05em;
+  text-decoration: none;
+}

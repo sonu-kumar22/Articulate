@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+@import 'tailwindcss-primeui';
+@import 'primeicons/primeicons.css';
+
+@custom-variant dark (&:where(.app-dark, .app-dark *));
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.app-dark {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+  }
+}

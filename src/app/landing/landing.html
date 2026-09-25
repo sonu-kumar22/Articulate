@@ -1,0 +1,53 @@
+<main class="min-h-screen bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-50 md:grid md:grid-cols-[44%_1fr]">
+  <aside class="hidden min-h-screen flex-col justify-between bg-emerald-950 p-12 text-white dark:bg-zinc-900 md:flex">
+    <a class="brand" href="/" aria-label="Articulate home">articulate</a>
+    <div class="my-auto max-w-md py-16">
+      <p class="text-xs font-semibold tracking-[.16em] text-lime-200">THE SPACE TO THINK CLEARLY</p>
+      <h1 class="mt-6 text-6xl font-normal leading-tight [font-family:Georgia,serif]">Find the words that move ideas <em
+          class="text-lime-200">forward.</em></h1>
+      <p class="mt-6 max-w-sm leading-relaxed text-white/70">A focused workspace for shaping your best thinking, one
+        idea at a time.</p>
+    </div>
+    <p class="text-xs text-white/50">© 2026 Articulate</p>
+  </aside>
+
+  <section class="flex min-h-screen items-center justify-center p-6 sm:p-10" aria-labelledby="login-title">
+    <div class="w-full max-w-sm">
+      <div class="mb-12 flex items-center justify-between">
+        <a class="brand text-emerald-950 dark:text-zinc-50 md:hidden" href="/" aria-label="Articulate home">articulate</a>
+        <button pButton type="button" severity="primary" text rounded
+          [attr.aria-label]="isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
+          [attr.aria-pressed]="isDark()" (click)="toggleTheme()">
+          @if (isDark()) {
+            <i class="pi pi-sun" aria-hidden="true"></i>
+          } @else {
+            <i class="pi pi-moon" aria-hidden="true"></i>
+          }
+        </button>
+      </div>
+      <p class="text-xs font-semibold tracking-[.16em] text-emerald-800 dark:text-zinc-300">WELCOME BACK</p>
+      <h2 id="login-title" class="mt-3 text-4xl font-normal [font-family:Georgia,serif]">Sign in to your space</h2>
+      <p class="mt-3 text-stone-600 dark:text-zinc-400">Continue where your best ideas left off.</p>
+
+      <div class="mt-8 grid gap-3">
+        <button pButton type="button" variant="outlined" severity="primary" fluid
+          [disabled]="signingIn()" (click)="signInWithGoogle()">
+          <i class="pi pi-google" aria-hidden="true"></i>
+          Continue with Google
+        </button>
+        <button pButton type="button" variant="outlined" severity="primary" fluid disabled>
+          <i class="pi pi-facebook" aria-hidden="true"></i>
+          Facebook login coming soon
+        </button>
+      </div>
+
+      @if (message()) {
+      <p class="mt-4 text-sm text-emerald-900 dark:text-zinc-300" role="status">{{ message() }}</p>
+      }
+
+      <p class="mt-8 text-center text-xs leading-relaxed text-stone-500 dark:text-zinc-400">By continuing, you agree to our <a
+          class="underline" href="#terms">Terms of Service</a> and <a class="underline" href="#privacy">Privacy
+          Policy</a>.</p>
+    </div>
+  </section>
+</main>
