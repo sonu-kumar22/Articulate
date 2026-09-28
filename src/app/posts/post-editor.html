@@ -55,17 +55,17 @@
         </div>
         <div>
           <label class="mb-2 block font-medium" id="post-body-label">Story <span class="required-mark" aria-hidden="true">*</span></label>
-          <app-text-editor [value]="body" (valueChange)="body = $event" [disabled]="saving()" labelledBy="post-body-label" [required]="true" (touched)="validation.touch('body')"
+          <app-text-editor [value]="body" (valueChange)="body = $event" (processingChange)="imageProcessing.set($event)" [disabled]="saving()" labelledBy="post-body-label" [required]="true" (touched)="validation.touch('body')"
             [invalid]="!!fieldError('body')" [attr.aria-invalid]="!!fieldError('body')" [describedBy]="fieldError('body') ? 'post-body-error' : ''" />
           @if (fieldError('body')) { <p id="post-body-error" class="field-error">{{ fieldError('body') }}</p> }
         </div>
         <div class="flex flex-wrap items-center justify-between gap-3 border-t border-surface pt-5">
 
           <div class="flex flex-wrap gap-2">
-            <button pButton type="submit" variant="outlined" [disabled]="saving() || !store.ready()">
+            <button pButton type="submit" variant="outlined" [disabled]="saving() || imageProcessing() || !store.ready()">
               <i class="pi pi-save" aria-hidden="true"></i> Save draft
             </button>
-            <button pButton type="button" [disabled]="!draftId || saving()" (click)="publish()">
+            <button pButton type="button" [disabled]="!draftId || saving() || imageProcessing()" (click)="publish()">
               <i class="pi pi-send" aria-hidden="true"></i> Publish
             </button>
           </div>

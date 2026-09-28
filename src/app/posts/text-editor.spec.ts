@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TextEditor } from './text-editor';
+import { ImageCompressor } from './image-compressor';
+import { FormFeedback } from '../shared/form-feedback';
 
 @Component({
   imports: [TextEditor],
@@ -10,6 +12,20 @@ import { TextEditor } from './text-editor';
 class EditorHost { body = '<p>Saved story</p>'; }
 
 describe('Quill text editor', () => {
+  const compressor = { compress: vi.fn() };
+  beforeEach(() => {
+    // jsdom does not implement selection geometry used by Quill's default picker.
+    const createRange = document.createRange.bind(document);
+    vi.spyOn(document, 'createRange').mockImplementation(() => {
+      const range = createRange();
+      range.getBoundingClientRect = () => new DOMRect();
+      range.getClientRects = () => [] as unknown as DOMRectList;
+      return range;
+    });
+    compressor.compress.mockReset().mockResolvedValue('data:image/webp;base64,UklGRg==');
+    TestBed.overrideComponent(TextEditor, { set: { providers: [{ provide: ImageCompressor, useValue: compressor }] } });
+  });
+  afterEach(() => vi.restoreAllMocks());
   it('uses the default file picker and preserves embedded images when reopened', async () => {
     TestBed.configureTestingModule({ imports: [EditorHost] });
     const fixture = TestBed.createComponent(EditorHost);
@@ -30,7 +46,7 @@ describe('Quill text editor', () => {
     picker.dispatchEvent(new Event('change'));
     await vi.waitFor(() => {
       fixture.detectChanges();
-      expect(fixture.componentInstance.body).toContain('data:image/png;base64,');
+      expect(fixture.componentInstance.body).toContain('data:image/webp;base64,');
     });
     const saved = fixture.componentInstance.body;
     fixture.destroy();
@@ -39,8 +55,29 @@ describe('Quill text editor', () => {
     await reopened.whenStable();
     await vi.waitFor(() => {
       reopened.detectChanges();
-      expect(reopened.nativeElement.querySelector('.ql-editor img')?.getAttribute('src')).toContain('data:image/png;base64,');
+      expect(reopened.nativeElement.querySelector('.ql-editor img')?.getAttribute('src')).toContain('data:image/webp;base64,');
     });
+    expect(compressor.compress).toHaveBeenCalledWith(file);
+  });
+
+  it('keeps the existing story when compression fails', async () => {
+    compressor.compress.mockRejectedValue(new Error('Could not compress this image.'));
+    TestBed.configureTestingModule({ imports: [EditorHost] });
+    const fixture = TestBed.createComponent(EditorHost);
+    await fixture.whenStable();
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.ql-editor')).toBeTruthy();
+    });
+    const root = fixture.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('[aria-label="Add image"]')!.click();
+    const picker = root.querySelector<HTMLInputElement>('input.ql-image[type="file"]')!;
+    Object.defineProperty(picker, 'files', { value: [new File(['bad'], 'bad.png', { type: 'image/png' })] });
+    picker.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.body).toBe('<p>Saved story</p>');
+    expect(TestBed.inject(FormFeedback).messages()[0].severity).toBe('error');
+    expect(root.querySelector('.ql-editor')?.getAttribute('contenteditable')).toBe('true');
   });
   it('preserves headings and list formatting when reopening a saved story', async () => {
     TestBed.configureTestingModule({ imports: [EditorHost] });

@@ -36,6 +36,7 @@ export class PostEditor {
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly validation = new FormValidation();
   protected saving = signal(false);
+  protected readonly imageProcessing = signal(false);
   protected readonly loadingDraft = signal(false);
   private loadedId = '';
   private loadedOwner: string | null = null;
@@ -147,7 +148,7 @@ export class PostEditor {
   }
 
   protected async saveDraft(): Promise<void> {
-    if (this.saving()) return;
+    if (this.saving() || this.imageProcessing()) return;
     if (!this.validate()) return;
     this.saving.set(true);
     this.feedback.clear();
@@ -169,7 +170,7 @@ export class PostEditor {
   }
 
   protected async publish(): Promise<void> {
-    if (this.saving() || !this.draftId) return;
+    if (this.saving() || this.imageProcessing() || !this.draftId) return;
     if (!this.validate()) return;
     this.saving.set(true);
     this.feedback.clear();

@@ -1,14 +1,19 @@
-import { Component, effect, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { QuillEditorComponent } from 'ngx-quill';
+import { ImageCompressor } from './image-compressor';
+import { FormFeedback } from '../shared/form-feedback';
+import { storyExceedsSizeLimit } from '../shared/story-content';
 
 @Component({
   selector: 'app-text-editor',
   imports: [FormsModule, QuillEditorComponent],
+  providers: [ImageCompressor],
   template: `
     <quill-editor class="text-editor w-full" theme="snow" format="html" placeholder="Write your story..."
       [ngModel]="value()" (ngModelChange)="valueChange.emit($event ?? '')"
-      [ngModelOptions]="{ standalone: true }" [disabled]="disabled()" [sanitize]="true"
+      [ngModelOptions]="{ standalone: true }" [disabled]="disabled() || compressing()" [sanitize]="true"
+      [modules]="modules" [attr.aria-busy]="compressing()"
       [formats]="formats" [defaultEmptyValue]="''" (onBlur)="touched.emit()"
       (onEditorCreated)="editorRoot.set($event.root)">
       <div quill-editor-toolbar>
@@ -33,7 +38,8 @@ import { QuillEditorComponent } from 'ngx-quill';
         </span>
       </div>
     </quill-editor>
-    <p class="mt-2 text-xs text-muted-color">Images are embedded in the story. Use small images; the complete story must fit within 500 KB.</p>
+    @if (compressing()) { <p class="mt-2 text-sm text-muted-color" role="status">Compressing image…</p> }
+    <p class="mt-2 text-xs text-muted-color">Images are automatically compressed before embedding. The complete story must fit within 500 KB.</p>
   `,
   styles: `
     :host { display: block; min-width: 0; max-width: 100%; }
@@ -57,6 +63,18 @@ export class TextEditor {
   readonly describedBy = input('');
   readonly required = input(false);
   readonly touched = output<void>();
+  readonly processingChange = output<boolean>();
+  protected readonly compressing = signal(false);
+  private readonly compressor = inject(ImageCompressor);
+  private readonly feedback = inject(FormFeedback);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly quill = viewChild(QuillEditorComponent);
+  protected readonly modules = {
+    uploader: {
+      mimetypes: ['image/png', 'image/jpeg'],
+      handler: (range: { index: number; length: number }, files: File[]) => { void this.insertImages(range, files); },
+    },
+  };
   protected readonly formats = ['header', 'bold', 'italic', 'underline', 'list', 'link', 'image'];
   protected readonly editorRoot = signal<HTMLElement | null>(null);
 
@@ -73,5 +91,40 @@ export class TextEditor {
       if (this.describedBy()) root.setAttribute('aria-describedby', this.describedBy());
       else root.removeAttribute('aria-describedby');
     });
+  }
+
+  private async insertImages(range: { index: number; length: number }, files: File[]): Promise<void> {
+    const editor = this.quill()?.quillEditor;
+    if (!editor || this.disabled() || this.compressing() || !files.length) return;
+    this.compressing.set(true);
+    this.processingChange.emit(true);
+    this.feedback.clear();
+    const originalValue = this.value();
+    try {
+      const images: string[] = [];
+      for (const file of files) {
+        images.push(await this.compressor.compress(file));
+        if (this.destroyRef.destroyed) return;
+        if (this.disabled() || this.value() !== originalValue) throw new Error('The story changed while compressing. Please add the image again.');
+        const addedHtml = images.map(src => `<p><img src="${src}"></p>`).join('');
+        if (storyExceedsSizeLimit(this.value() + addedHtml)) {
+          throw new Error('These images would exceed the 500 KB story limit. Remove an existing image or choose fewer images.');
+        }
+      }
+      // Keep the built-in picker/drop behavior; only replace its encoding step.
+      editor.editReadOnly(() => editor.updateContents([
+        { retain: range.index }, { delete: range.length },
+        ...images.map(image => ({ insert: { image } })),
+      ], 'user'));
+      editor.setSelection(range.index + images.length, 0, 'silent');
+      this.feedback.show('Image compressed and added.', 'success');
+    } catch (error) {
+      if (!this.destroyRef.destroyed) this.feedback.show(error instanceof Error ? error.message : 'Could not compress this image.');
+    } finally {
+      if (!this.destroyRef.destroyed) {
+        this.compressing.set(false);
+        this.processingChange.emit(false);
+      }
+    }
   }
 }

@@ -18,6 +18,7 @@ class EditorStub {
   value = input(''); disabled = input(false); labelledBy = input('');
   invalid = input(false); describedBy = input(''); required = input(false);
   valueChange = output<string>(); touched = output<void>();
+  processingChange = output<boolean>();
 }
 
 describe('Post form validation', () => {

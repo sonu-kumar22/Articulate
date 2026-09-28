@@ -18,6 +18,7 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "webWorkerTsConfig": "tsconfig.worker.json",
             "assets": [
               {
                 "glob": "**/*",
@@ -52,6 +53,13 @@
                 }
               ],
               "outputHashing": "all"
+            },
+            "github-pages": {
+              "baseHref": "/Articulate/",
+              "server": false,
+              "ssr": false,
+              "outputMode": "static",
+              "outputPath": "dist/Articulate"
             },
             "development": {
               "optimization": false,
